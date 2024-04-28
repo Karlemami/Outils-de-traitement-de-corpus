@@ -1,6 +1,21 @@
 import requests
 from pathlib import Path
+from dataclasses import dataclass
 
+@dataclass
+class File:
+    size: int
+    sha: str
+    language: str
+    file_path_in_repo: str
+    repo_url: str
+    repo_licences: list[str]
+    stars_count: int
+    issues_count: int
+    forks_count: int
+    content: str
+    # avg_line_length: float
+    # max_line_length: int
 
 def scrapper(language, nb_of_repos, headers):
     """Fetch the n most starred repositories containing a given language on Github"""
@@ -10,36 +25,38 @@ def scrapper(language, nb_of_repos, headers):
     return repos
 
 
-def download_files_recursively(folder, extension, headers, save_directory):
+def download_files_recursively(folder, extension, headers):
     """
     Download all files in a folder and its subfolders with a given extension
     Files are downloaded dynamically to avoid saving no files after waiting for a long time in case of an error
     """
-    folder = requests.get(folder, headers=headers).json()
-    for item in folder:
+    files = requests.get(folder, headers=headers).json()
+    print(folder)
+    files_content = []
+    for item in files:
         if item["type"] == "file":
             file_path = Path(item["name"])
             if file_path.suffix == extension:
-                download_file(item, save_directory, headers)
+                files_content.append(download_file(item, headers))
         elif item["type"] == "dir":
-            download_files_recursively(
+            files_content.extend(download_files_recursively(
                 folder=item["url"],
                 extension=extension,
                 headers=headers,
-                save_directory=save_directory,
-            )
+            ))
+    return files_content
 
 
-def download_file(file, directory, headers):
+def download_file(file,headers):
     """Download files to a given directory"""
     file_response = requests.get(file["download_url"], headers=headers)
     if file_response.status_code == 200:
-        with open(f'{directory}/{file["sha"]}_{file["name"]}', "w") as f:
-            f.write(file_response.text)
+        return [file_response.text, file["size"], file["sha"], file["path"]]
 
 
 def main():
     import argparse
+    import json
 
     extensions = {
         "python": ".py",
@@ -64,9 +81,7 @@ def main():
         "nb_of_repos", type=int, help="The number of repositories to scrap"
     )
     parser.add_argument(
-        "download_directory",
-        type=str,
-        help="path to the directory where the files are to be downloaded. The folder must already exist",
+        "-j","--json", type=str, help="The csv file to save the data"
     )
     parser.add_argument(
         "-pat",
@@ -82,16 +97,36 @@ def main():
         headers = None
 
     repos = scrapper(args.language, args.nb_of_repos, headers)
+    files = []
     for repo_index in range(len(repos) - 1):
         print("Crawling through repo number", repo_index + 1)
+        repo_info = requests.get(f"https://api.github.com/repos/{repos[repo_index]['full_name']}",headers=headers).json()
         repo_api_link = f"https://api.github.com/repos/{repos[repo_index]['full_name']}/contents/"
 
-        download_files_recursively(
+        repo_files = download_files_recursively(
             folder=repo_api_link,
             extension=extensions[args.language],
             headers=headers,
-            save_directory=args.download_directory,
         )
+        for file in repo_files:
+        
+            file_obj = File(
+            content=file[0],
+            size=file[1],
+            sha=file[2],
+            language=args.language,
+            file_path_in_repo=file[3],
+            repo_url=repo_info["html_url"],
+            repo_licences=repo_info.get("license", {}).get("spdx_id", []),
+            stars_count=repo_info["stargazers_count"],
+            issues_count=repo_info["open_issues_count"],
+            forks_count=repo_info["forks_count"],
+            # avg_line_length=calculate_avg_line_length(file_response.text),
+            # max_line_length=calculate_max_line_length(file_response.text)
+        )
+            with open(args.json, 'a') as f:
+                f.write(json.dumps(file_obj.__dict__))
+                f.write('\n')
 
 
 if __name__ == "__main__":
