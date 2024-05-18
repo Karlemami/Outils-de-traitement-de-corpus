@@ -1,0 +1,44 @@
+---
+task_categories:
+- categorization
+language:
+- en
+pretty_name: Steam Starfield Review Dataset
+size_categories:
+- 10K<n<100K
+---
+
+# Dataset Card for Dataset Name
+
+Ce dataset est constitué de code scrappé sur github et de métadonnées.
+
+## Dataset Details
+
+### Dataset Description
+
+Ce dataset comprend les colonnes suivantes :
+
+'size' : la taille du fichier (int)
+'sha' : le SHA (Secure Hash Algorithm) du commit git (str)
+'language' : le langage de programmation utilisé dans le fichier (str)
+'file_path_in_repo' : le chemin du fichier dans le dépôt (str)
+'repo_url' : l'URL du dépôt GitHub (str)
+'repo_licences' : la licence du dépôt (str)
+'stars_count' : le nombre d'étoiles du dépôt (int)
+'issues_count' : le nombre de problèmes ouverts dans le dépôt (int)
+'forks_count' : le nombre de forks du dépôt (int)
+'content' : le contenu du fichier (str)
+
+
+
+## Uses
+
+
+Ce dataset a été créé en priorité pour faire de la génération de code.
+
+### Direct Use
+
+Générer du code à partir de ce dataset.
+
+
+Tous les fichiers de ce dataset ont été récupérés depuis des dépôts GitHub.
